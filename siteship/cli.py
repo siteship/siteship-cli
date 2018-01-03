@@ -5,13 +5,15 @@
 import click
 import configparser
 import os
+import netrc
 import shutil
 import tempfile
+import time
 import requests
 import requests_toolbelt
 
 
-API_URL = 'https://httpbin.org/'
+API_URL = 'https://siteship.sh/api/'
 
 
 @click.group()
@@ -44,12 +46,15 @@ def deploy(site, path, domain):
         config[site] = conf
         config.write(configfile)
 
+    # NetRC
+    print(netrc.netrc())
+
     with tempfile.TemporaryDirectory() as directory:
         archive = shutil.make_archive(os.path.join(directory, 'archive'), 'zip', conf['path'])
         encoder = requests_toolbelt.MultipartEncoder({
             'site': site,
-            'archive': (
-                'progress_bar.py',
+            'upload': (
+                '{}.zip'.format(int(time.time())),
                 open(archive, 'rb'),
                 'application/zip'
             ),
@@ -63,12 +68,14 @@ def deploy(site, path, domain):
         with click.progressbar(length=encoder.len, label='Uploading content') as bar:
             monitor = requests_toolbelt.MultipartEncoderMonitor(encoder, progress_callback(encoder, bar))
             r = requests.post(
-                '{}post/'.format(API_URL),
+                '{}deploys/'.format(API_URL),
                 data=monitor,
                 headers={
-                    'Content-Type': 'multipart/form-data'
+                    'Content-Type': 'multipart/form-data',
+                    'Authorization': 'Token {}'.format('XXX')
                 }
             )
+            print(r.json())
 
 
 if __name__ == "__main__":
