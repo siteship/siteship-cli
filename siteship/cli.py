@@ -5,12 +5,13 @@
 import click
 import configparser
 import os
-import netrc
 import shutil
 import tempfile
 import time
 import requests
-import requests_toolbelt
+
+from tinynetrc import Netrc
+netrc = Netrc()
 
 
 API_URL = 'https://siteship.sh/api/'
@@ -25,57 +26,75 @@ def main(args=None):
 
 
 @main.command()
-@click.option('--site', help='site ID')
 @click.option('--path', help='path to the static content directory')
 @click.option('--domain', help='your-custom-domain.com')
-def deploy(site, path, domain):
+@click.pass_context
+def deploy(ctx, path, domain):
+    # Get authentication details
+    if 'siteship.sh' not in netrc.hosts:
+        ctx.invoke(login)
+
     config = configparser.ConfigParser()
     config.read('.siteship')
 
     # Read configuration from disk
-    site = next(iter(config.sections() or []), None) if not site else site
-    conf = dict(config.items(site)) if site else {}
+    for site in config.sections()[:1]:
+        conf = dict(config.items(site))
 
-    if path:
-        conf.update({'path': path})
-    if domain:
-        conf.update({'domain': domain})
+        if path:
+            conf.update({'path': path})
+        if domain:
+            conf.update({'domain': domain})
 
-    # Write configuration to disk
-    with open('.siteship', 'w') as configfile:
-        config[site] = conf
-        config.write(configfile)
+        # Write configuration to disk
+        with open('.siteship', 'w') as configfile:
+            config[site] = conf
+            config.write(configfile)
 
-    # NetRC
-    print(netrc.netrc())
+        with tempfile.TemporaryDirectory() as directory:
+            archive = shutil.make_archive(os.path.join(directory, 'archive'), 'zip', conf['path'])
 
-    with tempfile.TemporaryDirectory() as directory:
-        archive = shutil.make_archive(os.path.join(directory, 'archive'), 'zip', conf['path'])
-        encoder = requests_toolbelt.MultipartEncoder({
-            'site': site,
-            'upload': (
-                '{}.zip'.format(int(time.time())),
-                open(archive, 'rb'),
-                'application/zip'
-            ),
-        })
+            r = requests.post('{}deploys/'.format(API_URL), data={
+                'site': '{}sites/{}/'.format(API_URL, site)
+            },
+            files={
+                'upload': open(archive, 'rb')
+            },
+            headers={
+                'Authorization': 'Token {}'.format('')
+            })
+            r.raise_for_status()
 
-        def progress_callback(encoder, bar):
-            def callback(monitor):
-                bar.update(monitor.bytes_read)
-            return callback
 
-        with click.progressbar(length=encoder.len, label='Uploading content') as bar:
-            monitor = requests_toolbelt.MultipartEncoderMonitor(encoder, progress_callback(encoder, bar))
-            r = requests.post(
-                '{}deploys/'.format(API_URL),
-                data=monitor,
-                headers={
-                    'Content-Type': 'multipart/form-data',
-                    'Authorization': 'Token {}'.format('XXX')
-                }
-            )
-            print(r.json())
+@main.command()
+@click.option('--email')
+@click.option('--password')
+def register(email, password):
+    print('register')
+
+
+@main.command()
+@click.option('--email', prompt=True, help='Your login email')
+@click.option('--password', prompt=True, hide_input=True, help='Your login password')
+def login(email, password):
+    r = requests.post('{}auth/'.format(API_URL), json={
+        'username': email,
+        'password': password
+    })
+    r.raise_for_status()
+
+    netrc['siteship.sh'] = {
+        'login': email,
+        'password': r.json()['token']
+    }
+    netrc.save()
+
+
+@main.command()
+def logout():
+    click.confirm('This will remove your login credentials!', abort=True)
+    del netrc['siteship.sh']
+    netrc.save()
 
 
 if __name__ == "__main__":
