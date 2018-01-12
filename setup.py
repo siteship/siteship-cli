@@ -12,8 +12,9 @@ with open('HISTORY.rst') as history_file:
     history = history_file.read()
 
 requirements = [
-    'Click>=6.0',
-    # TODO: put package requirements here
+    'click>=6.0,<7',
+    'tinynetrc==1.1.0',
+    'requests>=2.18.4,<3'
 ]
 
 setup_requirements = [

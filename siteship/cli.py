@@ -18,14 +18,14 @@ API_URL = 'https://siteship.sh/api/'
 
 
 @click.group()
-def main(args=None):
+def siteship(args=None):
     """Console script for siteship."""
     click.echo("Replace this message by putting your code into "
                "siteship.cli.main")
     click.echo("See click documentation at http://click.pocoo.org/")
 
 
-@main.command()
+@siteship.command()
 @click.option('--path', help='path to the static content directory')
 @click.option('--domain', help='your-custom-domain.com')
 @click.pass_context
@@ -66,14 +66,14 @@ def deploy(ctx, path, domain):
             r.raise_for_status()
 
 
-@main.command()
+@siteship.command()
 @click.option('--email')
 @click.option('--password')
 def register(email, password):
     print('register')
 
 
-@main.command()
+@siteship.command()
 @click.option('--email', prompt=True, help='Your login email')
 @click.option('--password', prompt=True, hide_input=True, help='Your login password')
 def login(email, password):
@@ -90,7 +90,7 @@ def login(email, password):
     netrc.save()
 
 
-@main.command()
+@siteship.command()
 def logout():
     click.confirm('This will remove your login credentials!', abort=True)
     del netrc['siteship.sh']
@@ -98,4 +98,4 @@ def logout():
 
 
 if __name__ == "__main__":
-    main()
+    siteship()
