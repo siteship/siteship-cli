@@ -10,7 +10,10 @@ import tempfile
 import requests
 
 from tinynetrc import Netrc
-netrc = Netrc()
+try:
+    netrc = Netrc()
+except FileNotFoundError:
+    netrc = None
 
 
 API_URL = 'https://siteship.sh/api/'
