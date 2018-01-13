@@ -23,6 +23,15 @@ except FileNotFoundError:
 
 
 API_URL = 'https://siteship.sh/api/'
+API_URL = 'http://localhost:8000/api/'
+
+
+def render_validation_errors(response):
+    for field, errors in response.json().items():
+        click.echo('* {} - {}'.format(
+            click.style(field, fg='red'),
+            ', '.join(errors) if isinstance(errors, type([])) else errors
+        ))
 
 
 @click.group()
@@ -85,16 +94,35 @@ def whoami():
 @siteship.command()
 def list():
     if netrc:
-        r = requests.get('{}deploys/'.format(API_URL))
-        print(r.json())
+        r = requests.get('{}sites/'.format(API_URL))
+        for site in r.json():
+            click.echo('[{}] {} {}'.format(
+                site['id'],
+                click.style('*', fg='green'),
+                site['domain']
+            ))
     else:
-        pass
+        click.echo(click.style('Please log in to list sites.', fg='red'))
 
 @siteship.command()
-@click.option('--email')
-@click.option('--password')
+@click.option('--email', prompt=True, help='Your login email')
+@click.option('--password', prompt=True, hide_input=True, help='Your login password')
 def register(email, password):
-    print('register')
+    r = requests.post('{}signup/'.format(API_URL), json={
+        'email': email,
+        'password': password
+    })
+    if r.status_code == requests.codes.created:
+        netrc['siteship.sh'] = {
+            'login': r.json()['email'],
+            'password': r.json()['token']
+        }
+        netrc.save()
+        click.echo(click.style('Signup completed you can now start shipping your sites!', fg='green'))
+    elif str(r.status_code).startswith('4'):
+        render_validation_errors(response=r)
+    else:
+        r.raise_for_status()
 
 
 @siteship.command()
