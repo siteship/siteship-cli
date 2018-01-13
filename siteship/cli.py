@@ -9,10 +9,16 @@ import shutil
 import tempfile
 import requests
 
+# Py2 support
+try:
+    FileNotFoundError
+except NameError:
+    FileNotFoundError = IOError
+
 from tinynetrc import Netrc
 try:
     netrc = Netrc()
-except (IOError, FileNotFoundError):
+except FileNotFoundError:
     netrc = None
 
 
@@ -79,7 +85,8 @@ def whoami():
 @siteship.command()
 def list():
     if netrc:
-        pass
+        r = requests.get('{}deploys/'.format(API_URL))
+        print(r.json())
     else:
         pass
 
