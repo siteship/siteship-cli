@@ -12,7 +12,7 @@ import requests
 from tinynetrc import Netrc
 try:
     netrc = Netrc()
-except FileNotFoundError:
+except (IOError, FileNotFoundError):
     netrc = None
 
 
@@ -67,6 +67,21 @@ def deploy(ctx, path, domain):
             })
             r.raise_for_status()
 
+
+@siteship.command()
+def whoami():
+    if netrc:
+        pass
+    else:
+        pass
+
+
+@siteship.command()
+def list():
+    if netrc:
+        pass
+    else:
+        pass
 
 @siteship.command()
 @click.option('--email')
