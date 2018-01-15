@@ -9,11 +9,17 @@ import shutil
 import tempfile
 import requests
 
-# Py2 support
+# Py2 / py3 support
 try:
     FileNotFoundError
 except NameError:
     FileNotFoundError = IOError
+
+try:
+    from urllib.parse import urlparse
+except ImportError:
+    from urlparse import urlparse
+
 
 from tinynetrc import Netrc
 try:
@@ -23,7 +29,7 @@ except FileNotFoundError:
 
 
 API_URL = 'https://siteship.sh/api/'
-API_URL = 'http://localhost:8000/api/'
+# API_URL = 'http://localhost:8000/api/'
 
 
 def render_validation_errors(response):
@@ -48,7 +54,7 @@ def siteship(args=None):
 @click.pass_context
 def deploy(ctx, path, domain):
     # Get authentication details
-    if 'siteship.sh' not in netrc.hosts:
+    if not netrc or urlparse(API_URL).hostname not in netrc.hosts:
         ctx.invoke(login)
 
     config = configparser.ConfigParser()
@@ -71,16 +77,21 @@ def deploy(ctx, path, domain):
         with tempfile.TemporaryDirectory() as directory:
             archive = shutil.make_archive(os.path.join(directory, 'archive'), 'zip', conf['path'])
 
-            r = requests.post('{}deploys/'.format(API_URL), data={
-                'site': '{}sites/{}/'.format(API_URL, site)
-            },
-            files={
-                'upload': open(archive, 'rb')
-            },
-            headers={
-                'Authorization': 'Token {}'.format('')
-            })
-            r.raise_for_status()
+            r = requests.post(
+                url='{}deploys/'.format(API_URL),
+                data={
+                    'site': '{}sites/{}/'.format(API_URL, site)
+                },
+                files={
+                    'upload': open(archive, 'rb')
+                }
+            )
+            if r.status_code == requests.codes.created:
+                click.echo(click.style('Site deployed successfully!', fg='green'))
+            elif str(r.status_code).startswith('4'):
+                render_validation_errors(response=r)
+            else:
+                r.raise_for_status()
 
 
 @siteship.command()
@@ -93,14 +104,19 @@ def whoami():
 
 @siteship.command()
 def list():
-    if netrc:
+    if netrc and urlparse(API_URL).hostname in netrc.hosts:
         r = requests.get('{}sites/'.format(API_URL))
-        for site in r.json():
-            click.echo('[{}] {} {}'.format(
-                site['id'],
-                click.style('*', fg='green'),
-                site['domain']
-            ))
+        if r.status_code == requests.codes.ok:
+            for site in r.json():
+                click.echo('[{}] {} {}'.format(
+                    site['id'],
+                    click.style('*', fg='green'),
+                    site['domain']
+                ))
+        elif str(r.status_code).startswith('4'):
+            render_validation_errors(response=r)
+        else:
+            r.raise_for_status()
     else:
         click.echo(click.style('Please log in to list sites.', fg='red'))
 
@@ -113,7 +129,7 @@ def register(email, password):
         'password': password
     })
     if r.status_code == requests.codes.created:
-        netrc['siteship.sh'] = {
+        netrc[urlparse(API_URL).hostname] = {
             'login': r.json()['email'],
             'password': r.json()['token']
         }
@@ -135,7 +151,7 @@ def login(email, password):
     })
     r.raise_for_status()
 
-    netrc['siteship.sh'] = {
+    netrc[urlparse(API_URL).hostname] = {
         'login': email,
         'password': r.json()['token']
     }
@@ -144,9 +160,12 @@ def login(email, password):
 
 @siteship.command()
 def logout():
-    click.confirm('This will remove your login credentials!', abort=True)
-    del netrc['siteship.sh']
-    netrc.save()
+    if netrc and urlparse(API_URL).hostname in netrc.hosts:
+        click.confirm('This will remove your login credentials!', abort=True)
+        del netrc[urlparse(API_URL).hostname]
+        netrc.save()
+    else:
+        click.echo(click.style('Not logged in.', fg='red'))
 
 
 if __name__ == "__main__":
