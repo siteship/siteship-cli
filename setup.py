@@ -36,7 +36,7 @@ setup(
     packages=find_packages(include=['siteship']),
     entry_points={
         'console_scripts': [
-            'siteship=siteship.cli:main'
+            'siteship=siteship.cli:siteship'
         ]
     },
     include_package_data=True,
