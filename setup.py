@@ -19,12 +19,10 @@ requirements = [
 
 setup_requirements = [
     'pytest-runner',
-    # TODO(madisvain): put setup requirements (distutils extensions, etc.) here
 ]
 
 test_requirements = [
     'pytest',
-    # TODO: put package test requirements here
 ]
 
 setup(
