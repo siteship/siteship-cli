@@ -27,7 +27,7 @@ test_requirements = [
 
 setup(
     name='siteship',
-    version='0.1.1',
+    version='0.1.2',
     description="Static websites deployments made simple",
     long_description=readme + '\n\n' + history,
     author="Madis Väin",
