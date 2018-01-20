@@ -9,8 +9,6 @@ import shutil
 import tempfile
 import requests
 
-from click_default_group import DefaultGroup
-
 # Py2 / py3 support
 try:
     FileNotFoundError
@@ -42,7 +40,7 @@ def render_validation_errors(response):
         ))
 
 
-@click.group(cls=DefaultGroup, default='deploy', invoke_without_command=True)
+@click.group(invoke_without_command=True)
 @click.pass_context
 def siteship(ctx):
     """Console script for siteship."""
@@ -62,6 +60,7 @@ def siteship(ctx):
             '*' * len(credentials[2])
         ))
         click.echo('\n\n')
+    ctx.invoke(deploy)
 
 
 @siteship.command()
@@ -77,18 +76,40 @@ def deploy(ctx, path, domain):
     config.read('.siteship')
 
     # Read configuration from disk
-    for site in config.sections()[:1]:
+    sites = config.sections()[:1]
+
+    # TODO: Also check if domain not in configuration
+    if not sites:
+        if not path:
+            path = click.prompt('Site content path', type=str)
+
+        # Create a site for deployment
+        r = requests.post(url='{}sites/'.format(API_URL))
+        if r.status_code == requests.codes.created:
+            click.echo(click.style('Site {} created.'.format(r.json()['domain']), fg='green'))
+
+            # Write site configuration
+            conf = {
+                'path': path,
+                'domain': r.json()['domain']
+            }
+
+            # Write configuration to disk
+            with open('.siteship', 'w') as configfile:
+                config[r.json()['id']] = conf
+                config.write(configfile)
+
+            # Updated sites
+            sites = config.sections()[:1]
+
+        elif str(r.status_code).startswith('4'):
+            render_validation_errors(response=r)
+        else:
+            r.raise_for_status()
+
+    # Upload site contents
+    for site in sites:
         conf = dict(config.items(site))
-
-        if path:
-            conf.update({'path': path})
-        if domain:
-            conf.update({'domain': domain})
-
-        # Write configuration to disk
-        with open('.siteship', 'w') as configfile:
-            config[site] = conf
-            config.write(configfile)
 
         with tempfile.TemporaryDirectory() as directory:
             archive = shutil.make_archive(os.path.join(directory, 'archive'), 'zip', conf['path'])
@@ -108,6 +129,7 @@ def deploy(ctx, path, domain):
                 render_validation_errors(response=r)
             else:
                 r.raise_for_status()
+
 
 
 @siteship.command()
