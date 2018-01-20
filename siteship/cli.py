@@ -9,6 +9,8 @@ import shutil
 import tempfile
 import requests
 
+from click_default_group import DefaultGroup
+
 # Py2 / py3 support
 try:
     FileNotFoundError
@@ -28,8 +30,8 @@ except FileNotFoundError:
     netrc = None
 
 
-API_URL = 'https://siteship.sh/api/'
-# API_URL = 'http://localhost:8000/api/'
+# API_URL = 'https://siteship.sh/api/'
+API_URL = 'http://localhost:8000/api/'
 
 
 def render_validation_errors(response):
@@ -40,12 +42,26 @@ def render_validation_errors(response):
         ))
 
 
-@click.group()
-def siteship(args=None):
+@click.group(cls=DefaultGroup, default='deploy', invoke_without_command=True)
+@click.pass_context
+def siteship(ctx):
     """Console script for siteship."""
-    click.echo("Replace this message by putting your code into "
-               "siteship.cli.main")
-    click.echo("See click documentation at http://click.pocoo.org/")
+    click.echo('{} - {}'.format(
+        click.style('siteship.sh', fg='green'),
+        'Static websites deployments made simple\n'
+    ))
+
+    if netrc and urlparse(API_URL).hostname in netrc.hosts:
+        credentials = netrc.hosts[urlparse(API_URL).hostname]
+        click.echo('{}: {}'.format(
+            click.style('email:', fg='green'),
+            credentials[0]
+        ))
+        click.echo('{}: {}'.format(
+            click.style('token:', fg='green'),
+            '*' * len(credentials[2])
+        ))
+        click.echo('\n\n')
 
 
 @siteship.command()
@@ -96,10 +112,7 @@ def deploy(ctx, path, domain):
 
 @siteship.command()
 def whoami():
-    if netrc:
-        pass
-    else:
-        pass
+    pass
 
 
 @siteship.command()

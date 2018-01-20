@@ -13,6 +13,7 @@ with open('HISTORY.rst') as history_file:
 
 requirements = [
     'click>=6.0,<7',
+    'click-default-group==1.2',
     'tinynetrc==1.2.0',
     'requests>=2.18.4,<3'
 ]
