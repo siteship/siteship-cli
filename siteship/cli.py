@@ -59,7 +59,10 @@ def siteship(ctx):
             '*' * len(credentials[2])
         ))
         click.echo('\n\n')
-    ctx.invoke(deploy)
+
+    # If no sub-command then we deploy
+    if ctx.invoked_subcommand is None:
+        ctx.invoke(deploy)
 
 
 @siteship.command()

@@ -23,10 +23,17 @@ def test_content(response):
 def test_command_line_interface():
     """Test the Siteship CLI."""
     runner = CliRunner()
-    result = runner.invoke(cli.siteship, input='../docs/')
-    assert result.exit_code == 0
-    assert 'siteship.sh - Static websites deployments made simple' in result.output
 
+    # Login
+    login_result = runner.invoke(cli.siteship, ['login', '--email=test@siteship.sh', '--password=siteship'])
+    assert login_result.exit_code == 0
+
+    # Deploy
+    deploy_result = runner.invoke(cli.siteship, input='../docs/')
+    assert deploy_result.exit_code == 0
+    assert 'siteship.sh - Static websites deployments made simple' in deploy_result.output
+
+    # Help output
     help_result = runner.invoke(cli.siteship, ['--help'])
     assert help_result.exit_code == 0
     assert '--help  Show this message and exit.' in help_result.output
