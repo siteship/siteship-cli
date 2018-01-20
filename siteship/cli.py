@@ -28,8 +28,7 @@ except FileNotFoundError:
     netrc = None
 
 
-# API_URL = 'https://siteship.sh/api/'
-API_URL = 'http://localhost:8000/api/'
+API_URL = 'https://siteship.sh/api/'
 
 
 def render_validation_errors(response):
