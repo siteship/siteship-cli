@@ -13,3 +13,6 @@ script: tox
 
 before_install:
   - echo -e "" >> ~/.netrc
+
+global:
+  - TMPDIR=/tmp
