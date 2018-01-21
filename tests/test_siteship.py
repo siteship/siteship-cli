@@ -1,7 +1,6 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
-"""Tests for `siteship-cli` package."""
+from __future__ import unicode_literals
 
 import pytest
 from click.testing import CliRunner

@@ -9,17 +9,25 @@ import shutil
 import tempfile
 import requests
 
+# Py2 / py3 support
+try:
+    FileNotFoundError
+except NameError:
+    FileNotFoundError = IOError
+
 try:
     from urllib.parse import urlparse
 except ImportError:
     from urlparse import urlparse
 
+
 from tinynetrc import Netrc
-# Netrc for authentication
-netrc_file = os.path.join(os.path.expanduser('~'), '.netrc')
-if not os.path.exists(netrc_file):
-    open(netrc_file, "w+").close()
-netrc = Netrc()
+try:
+    netrc = Netrc()
+except FileNotFoundError:
+    netrc_file = os.path.join(os.path.expanduser('~'), '.netrc')
+    if not os.path.exists(netrc_file):
+        open(netrc_file, 'w+').close()
 
 
 API_URL = 'https://siteship.sh/api/'
