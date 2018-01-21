@@ -28,6 +28,7 @@ except FileNotFoundError:
     netrc_file = os.path.join(os.path.expanduser('~'), '.netrc')
     if not os.path.exists(netrc_file):
         open(netrc_file, 'w+').close()
+        netrc = Netrc()
 
 
 API_URL = 'https://siteship.sh/api/'
