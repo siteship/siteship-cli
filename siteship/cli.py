@@ -116,24 +116,28 @@ def deploy(ctx, path, domain):
     for site in sites:
         conf = dict(config.items(site))
 
-        with tempfile.TemporaryDirectory() as directory:
-            archive = shutil.make_archive(os.path.join(directory, 'archive'), 'zip', conf['path'])
+        # Create the archive
+        directory = tempfile.mkdtemp()
+        archive = shutil.make_archive(os.path.join(directory, 'archive'), 'zip', conf['path'])
 
-            r = requests.post(
-                url='{}deploys/'.format(API_URL),
-                data={
-                    'site': '{}sites/{}/'.format(API_URL, site)
-                },
-                files={
-                    'upload': open(archive, 'rb')
-                }
-            )
-            if r.status_code == requests.codes.created:
-                click.echo(click.style('Site deployed successfully!', fg='green'))
-            elif str(r.status_code).startswith('4'):
-                render_validation_errors(response=r)
-            else:
-                r.raise_for_status()
+        r = requests.post(
+            url='{}deploys/'.format(API_URL),
+            data={
+                'site': '{}sites/{}/'.format(API_URL, site)
+            },
+            files={
+                'upload': open(archive, 'rb')
+            }
+        )
+        if r.status_code == requests.codes.created:
+            click.echo(click.style('Site deployed successfully!', fg='green'))
+        elif str(r.status_code).startswith('4'):
+            render_validation_errors(response=r)
+        else:
+            r.raise_for_status()
+
+        # Clean up
+        shutil.rmtree(directory)
 
 
 
